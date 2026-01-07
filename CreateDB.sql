@@ -1,157 +1,150 @@
-﻿Create dataBase F1_Garage_Manager
-
-Use F1_Garage_Manager
-
-CREATE TABLE Circuito (
-    Nombre VARCHAR(100) PRIMARY KEY,
-    Distancia DECIMAL(6,2),
-    Curvas INT
-);
+CREATE DATABASE F1_Garage_Manager;
+GO
+USE F1_Garage_Manager;
+GO
 
 CREATE TABLE Equipo (
-    Nombre VARCHAR(100) PRIMARY KEY
+    Nombre VARCHAR(100) NOT NULL PRIMARY KEY
 );
 
+CREATE TABLE Circuito (
+    Nombre VARCHAR(100) NOT NULL PRIMARY KEY,
+    Distancia DECIMAL(6,2) NOT NULL,
+    Curvas INT NOT NULL CHECK (Curvas >= 0),
+    Nombre_Equipo VARCHAR(100) NOT NULL
+);
+
+
 CREATE TABLE Usuario (
-    Correo VARCHAR(150) PRIMARY KEY,
-    Contrasena VARCHAR(255),
-    Nombre VARCHAR(100),
-    Rol VARCHAR(50),
-    Habilidad INT,
-    Nombre_Equipo VARCHAR(100)
+    Correo VARCHAR(150) NOT NULL PRIMARY KEY,
+    Contrasena VARCHAR(255) NOT NULL,
+    Rol VARCHAR(50) NOT NULL,
+    Habilidad INT NOT NULL CHECK (Habilidad BETWEEN 1 AND 100),
+    Nombre_Equipo VARCHAR(100) NOT NULL
 );
 
 CREATE TABLE Carro (
-    N_Chasis VARCHAR(50) PRIMARY KEY,
-    Nombre_Equipo VARCHAR(100),
-    Correo VARCHAR(150)
+    N_Chasis VARCHAR(50) NOT NULL PRIMARY KEY,
+    Nombre_Equipo VARCHAR(100) NOT NULL,
+    Correo VARCHAR(150) NULL 
 );
 
 CREATE TABLE Usuario_Carro (
-    Correo VARCHAR(150) PRIMARY KEY,
-    N_Chasis VARCHAR(50)
+    Correo VARCHAR(150) NOT NULL,
+    N_Chasis VARCHAR(50) NOT NULL,
+    CONSTRAINT PK_Usuario_Carro PRIMARY KEY (Correo, N_Chasis)
 );
 
 CREATE TABLE Instalacion (
-    ID INT PRIMARY KEY,
-    PU INT,
-    Aerodinamica INT,
-    Neumaticos INT,
-    Suspension INT,
-    Caja_Cambios INT,
-    N_Chasis VARCHAR(50)
+    ID INT NOT NULL PRIMARY KEY,
+    PU INT NOT NULL,
+    Aerodinamica INT NOT NULL,
+    Neumaticos INT NOT NULL,
+    Suspension INT NOT NULL,
+    Caja_Cambios INT NOT NULL,
+    N_Chasis VARCHAR(50) NOT NULL
 );
 
 CREATE TABLE Inventario_General (
-    ID_Item INT PRIMARY KEY,
-    Categoria VARCHAR(100),
-    Precio DECIMAL(10,2),
-    Stock INT
+    ID_Item INT NOT NULL PRIMARY KEY,
+    Categoria VARCHAR(100) NOT NULL,
+    Precio DECIMAL(10,2) NOT NULL CHECK (Precio >= 0),
+    Stock INT NOT NULL CHECK (Stock >= 0)
 );
 
 CREATE TABLE Parte (
-    ID_Parte INT PRIMARY KEY,
-    Tipo VARCHAR(100),
-    p INT,
-    a INT,
-    m INT,
-    Nombre_Equipo VARCHAR(100),
-    N_Chasis VARCHAR(50),
-    ID_Item INT
+    ID_Parte INT NOT NULL PRIMARY KEY,
+    Tipo VARCHAR(100) NOT NULL,
+    p INT NOT NULL,
+    a INT NOT NULL,
+    m INT NOT NULL,
+    Nombre_Equipo VARCHAR(100) NOT NULL,
+    N_Chasis VARCHAR(50) NOT NULL,
+    ID_Item INT NOT NULL
 );
 
 CREATE TABLE Simulacion (
-    ID_Simulacion INT PRIMARY KEY,
-    Correo VARCHAR(150),
-    Nombre_Circuito VARCHAR(100)
+    ID_Simulacion INT NOT NULL PRIMARY KEY,
+    Correo VARCHAR(150) NOT NULL,
+    Nombre_Circuito VARCHAR(100) NOT NULL
 );
 
 CREATE TABLE Resultado (
-    [Timestamp] DATETIME PRIMARY KEY,
-    Rankings INT,
-    ID_Simulacion INT
+    [Timestamp] DATETIME NOT NULL PRIMARY KEY,
+    Rankings INT NOT NULL CHECK (Rankings >= 1),
+    ID_Simulacion INT NOT NULL
 );
 
 CREATE TABLE Patrocinadores (
-    ID INT PRIMARY KEY,
-    Nombre VARCHAR(100),
-    Nombre_Equipo VARCHAR(100)
+    ID INT NOT NULL PRIMARY KEY,
+    Nombre VARCHAR(100) NOT NULL,
+    Nombre_Equipo VARCHAR(100) NOT NULL
 );
 
 CREATE TABLE Aporte (
-    ID_Aporte INT PRIMARY KEY,
-    Fecha DATE,
-    Monto DECIMAL(10,2),
-    Descripcion VARCHAR(255),
-    ID INT
+    ID_Aporte INT NOT NULL PRIMARY KEY,
+    Fecha DATE NOT NULL,
+    Monto DECIMAL(10,2) NOT NULL CHECK (Monto > 0),
+    Descripcion VARCHAR(255) NULL,
+    ID INT NOT NULL
 );
--- Usuario → Equipo
+
+ALTER TABLE Circuito
+ADD CONSTRAINT FK_Circuito_Equipo
+FOREIGN KEY (Nombre_Equipo) REFERENCES Equipo(Nombre);
+
 ALTER TABLE Usuario
 ADD CONSTRAINT FK_Usuario_Equipo
 FOREIGN KEY (Nombre_Equipo) REFERENCES Equipo(Nombre);
 
--- Carro → Equipo
 ALTER TABLE Carro
 ADD CONSTRAINT FK_Carro_Equipo
 FOREIGN KEY (Nombre_Equipo) REFERENCES Equipo(Nombre);
 
--- Carro → Usuario
 ALTER TABLE Carro
 ADD CONSTRAINT FK_Carro_Usuario
 FOREIGN KEY (Correo) REFERENCES Usuario(Correo);
 
--- Usuario_Carro → Usuario
 ALTER TABLE Usuario_Carro
 ADD CONSTRAINT FK_UsuarioCarro_Usuario
 FOREIGN KEY (Correo) REFERENCES Usuario(Correo);
 
--- Usuario_Carro → Carro
 ALTER TABLE Usuario_Carro
 ADD CONSTRAINT FK_UsuarioCarro_Carro
 FOREIGN KEY (N_Chasis) REFERENCES Carro(N_Chasis);
 
--- Instalacion → Carro
 ALTER TABLE Instalacion
 ADD CONSTRAINT FK_Instalacion_Carro
 FOREIGN KEY (N_Chasis) REFERENCES Carro(N_Chasis);
 
--- Parte → Equipo
 ALTER TABLE Parte
 ADD CONSTRAINT FK_Parte_Equipo
 FOREIGN KEY (Nombre_Equipo) REFERENCES Equipo(Nombre);
 
--- Parte → Carro
 ALTER TABLE Parte
 ADD CONSTRAINT FK_Parte_Carro
 FOREIGN KEY (N_Chasis) REFERENCES Carro(N_Chasis);
 
--- Parte → Inventario_General
 ALTER TABLE Parte
 ADD CONSTRAINT FK_Parte_Inventario
 FOREIGN KEY (ID_Item) REFERENCES Inventario_General(ID_Item);
 
--- Simulacion → Usuario
 ALTER TABLE Simulacion
 ADD CONSTRAINT FK_Simulacion_Usuario
 FOREIGN KEY (Correo) REFERENCES Usuario(Correo);
 
--- Simulacion → Circuito
 ALTER TABLE Simulacion
 ADD CONSTRAINT FK_Simulacion_Circuito
 FOREIGN KEY (Nombre_Circuito) REFERENCES Circuito(Nombre);
 
--- Resultado → Simulacion
 ALTER TABLE Resultado
 ADD CONSTRAINT FK_Resultado_Simulacion
 FOREIGN KEY (ID_Simulacion) REFERENCES Simulacion(ID_Simulacion);
 
--- Patrocinadores → Equipo
 ALTER TABLE Patrocinadores
 ADD CONSTRAINT FK_Patrocinadores_Equipo
 FOREIGN KEY (Nombre_Equipo) REFERENCES Equipo(Nombre);
 
--- Aporte → Patrocinadores
 ALTER TABLE Aporte
 ADD CONSTRAINT FK_Aporte_Patrocinador
 FOREIGN KEY (ID) REFERENCES Patrocinadores(ID);
-
