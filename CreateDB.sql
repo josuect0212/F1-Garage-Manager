@@ -1,3 +1,9 @@
+CREATE DATABASE F1_Garage_Manager;
+GO 
+USE F1_Garage_Manager;
+GO
+
+
 CREATE TABLE Inventario_General (
     ID_Item INT PRIMARY KEY,
     Categoria VARCHAR(50) NOT NULL,

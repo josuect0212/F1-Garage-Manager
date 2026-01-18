@@ -1,41 +1,45 @@
-USE F1_Garage_Manager
+USE F1_Garage_Manager;
 GO
 
 CREATE PROCEDURE sp_CompraConPresupuesto
     @ID_Parte INT,
-    @Tipo VARCHAR(100),
-    @p INT,
-    @a INT,
-    @m INT,
+    @Tipo_Parte VARCHAR(50),
+    @p_stat INT,
+    @a_stat INT,
+    @m_stat INT,
     @Nombre_Equipo VARCHAR(100),
     @ID_Item INT,
-    @N_Chasis VARCHAR(50) = NULL
+    @No_Chasis VARCHAR(50) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
     BEGIN TRAN;
 
-    DECLARE @Presupuesto DECIMAL(10,2);
-    DECLARE @Gastado DECIMAL(10,2);
-    DECLARE @Precio DECIMAL(10,2);
+    DECLARE @Presupuesto DECIMAL(18,2);
+    DECLARE @Gastado DECIMAL(18,2);
+    DECLARE @Precio DECIMAL(18,2);
 
-    SELECT @Presupuesto = ISNULL(SUM(A.Monto),0)
+    SELECT @Presupuesto = ISNULL(SUM(A.Monto_Aporte),0)
     FROM Patrocinadores P
-    JOIN Aporte A ON P.ID = A.ID
-    WHERE P.Nombre_Equipo = @Nombre_Equipo;
+    JOIN Aporte A 
+        ON P.ID_Patrocinador = A.ID_Patrocinador_FK
+    WHERE P.Nombre_Equipo_FK = @Nombre_Equipo;
 
     SELECT @Gastado = ISNULL(SUM(I.Precio),0)
     FROM Parte Pa
-    JOIN Inventario_General I ON Pa.ID_Item = I.ID_Item
-    WHERE Pa.Nombre_Equipo = @Nombre_Equipo;
+    JOIN Inventario_General I 
+        ON Pa.ID_Item_FK = I.ID_Item
+    WHERE Pa.Nombre_Equipo_FK = @Nombre_Equipo;
 
     SELECT @Precio = Precio
     FROM Inventario_General
     WHERE ID_Item = @ID_Item;
 
+
     IF NOT EXISTS (
-        SELECT 1 FROM Inventario_General
-        WHERE ID_Item=@ID_Item AND Stock > 0
+        SELECT 1 
+        FROM Inventario_General
+        WHERE ID_Item = @ID_Item AND Stock > 0
     )
     BEGIN
         ROLLBACK;
@@ -55,31 +59,35 @@ BEGIN
     WHERE ID_Item = @ID_Item;
 
     INSERT INTO Parte
-    (ID_Parte,Tipo,p,a,m,Nombre_Equipo,N_Chasis,ID_Item)
+    (ID_Parte, Tipo_Parte, p_stat, a_stat, m_stat,
+     Nombre_Equipo_FK, No_Chasis_FK, ID_Item_FK)
     VALUES
-    (@ID_Parte,@Tipo,@p,@a,@m,@Nombre_Equipo,@N_Chasis,@ID_Item);
+    (@ID_Parte, @Tipo_Parte, @p_stat, @a_stat, @m_stat,
+     @Nombre_Equipo, @No_Chasis, @ID_Item);
 
     COMMIT;
 END;
+GO
 
 
 CREATE PROCEDURE sp_ComprarParte
     @ID_Parte INT,
-    @Tipo VARCHAR(100),
-    @p INT,
-    @a INT,
-    @m INT,
+    @Tipo_Parte VARCHAR(50),
+    @p_stat INT,
+    @a_stat INT,
+    @m_stat INT,
     @Nombre_Equipo VARCHAR(100),
     @ID_Item INT,
-    @N_Chasis VARCHAR(50) = NULL
+    @No_Chasis VARCHAR(50) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
     BEGIN TRAN;
 
     IF NOT EXISTS (
-        SELECT 1 FROM Inventario_General
-        WHERE ID_Item=@ID_Item AND Stock > 0
+        SELECT 1 
+        FROM Inventario_General
+        WHERE ID_Item = @ID_Item AND Stock > 0
     )
     BEGIN
         ROLLBACK;
@@ -89,32 +97,32 @@ BEGIN
 
     UPDATE Inventario_General
     SET Stock = Stock - 1
-    WHERE ID_Item=@ID_Item;
+    WHERE ID_Item = @ID_Item;
 
     INSERT INTO Parte
-    (ID_Parte,Tipo,p,a,m,Nombre_Equipo,N_Chasis,ID_Item)
+    (ID_Parte, Tipo_Parte, p_stat, a_stat, m_stat,
+     Nombre_Equipo_FK, No_Chasis_FK, ID_Item_FK)
     VALUES
-    (@ID_Parte,@Tipo,@p,@a,@m,@Nombre_Equipo,@N_Chasis,@ID_Item);
+    (@ID_Parte, @Tipo_Parte, @p_stat, @a_stat, @m_stat,
+     @Nombre_Equipo, @No_Chasis, @ID_Item);
 
     COMMIT;
 END;
-
+GO
 
 
 CREATE PROCEDURE sp_ArmarCarro
     @ID_Parte INT,
-    @N_Chasis VARCHAR(50)
+    @No_Chasis VARCHAR(50)
 AS
 BEGIN
     SET NOCOUNT ON;
-    BEGIN TRAN;
 
     UPDATE Parte
-    SET N_Chasis = @N_Chasis
+    SET No_Chasis_FK = @No_Chasis
     WHERE ID_Parte = @ID_Parte;
-
-    COMMIT;
 END;
+GO
 
 
 CREATE PROCEDURE sp_InventarioEquipo
@@ -125,11 +133,47 @@ BEGIN
 
     SELECT 
         P.ID_Parte,
-        P.Tipo,
+        P.Tipo_Parte,
         I.Categoria,
         I.Precio,
-        P.N_Chasis
+        P.No_Chasis_FK
     FROM Parte P
-    JOIN Inventario_General I ON P.ID_Item = I.ID_Item
-    WHERE P.Nombre_Equipo = @Nombre_Equipo;
+    JOIN Inventario_General I 
+        ON P.ID_Item_FK = I.ID_Item
+    WHERE P.Nombre_Equipo_FK = @Nombre_Equipo;
 END;
+GO
+
+--- Deshacer la compra ---
+DROP PROCEDURE IF EXISTS sp_DeshacerCompra;
+GO
+
+CREATE PROCEDURE sp_DeshacerCompra
+    @ID_Parte INT
+AS
+BEGIN
+    BEGIN TRAN;
+
+    DECLARE @ID_Item INT;
+
+    SELECT @ID_Item = ID_Item_FK
+    FROM Parte
+    WHERE ID_Parte = @ID_Parte;
+
+    IF @ID_Item IS NULL
+    BEGIN
+        ROLLBACK;
+        RAISERROR('La parte no existe.',16,1);
+        RETURN;
+    END
+
+    DELETE FROM Parte
+    WHERE ID_Parte = @ID_Parte;
+
+    UPDATE Inventario_General
+    SET Stock = Stock + 1
+    WHERE ID_Item = @ID_Item;
+
+    COMMIT;
+END;
+GO
