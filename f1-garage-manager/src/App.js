@@ -1,23 +1,28 @@
 import { useState } from "react";
-import Navbar from "./components/Navbar";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import AdminView from "./views/AdminView";
 import EngineerView from "./views/EngineerView";
 import DriverView from "./views/DriverView";
-import AdminView from "./views/AdminView";
 
 function App() {
-  const [vista, setVista] = useState("engineer");
+  const [user, setUser] = useState(null);
+  const [showRegister, setShowRegister] = useState(false);
 
-  return (
-    <div>
-      <h1>F1 Garage Manager</h1>
+  if (!user) {
+    return showRegister ? (
+      <Register goLogin={() => setShowRegister(false)} />
+    ) : (
+      <Login
+        setUser={setUser}
+        goRegister={() => setShowRegister(true)}
+      />
+    );
+  }
 
-      <Navbar setVista={setVista} />
-
-      {vista === "engineer" && <EngineerView />}
-      {vista === "driver" && <DriverView />}
-      {vista === "admin" && <AdminView />}
-    </div>
-  );
+  if (user.rol === "Admin") return <AdminView user={user} />;
+  if (user.rol === "Engineer") return <EngineerView user={user} />;
+  if (user.rol === "Driver") return <DriverView user={user} />;
 }
 
 export default App;
