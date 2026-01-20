@@ -1,0 +1,23 @@
+{
+  "name": "f1-simulador-api",
+  "version": "1.0.0",
+  "description": "API para el simulador de F1",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.x.x",
+    "express": "^4.18.x",
+    "morgan": "^1.10.x",
+    "mssql": "^10.x.x"
+  },
+  "devDependencies": {
+    "nodemon": "^3.x.x"
+  }
+}
