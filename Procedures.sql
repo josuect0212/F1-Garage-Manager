@@ -395,6 +395,98 @@ BEGIN
 END
 GO
 
+
+CREATE OR AlTER PROCEDURE sp_SimularCarrera
+    @Nombre_Circuito VARCHAR(100),
+    @Correo_Usuario_FK VARCHAR(100),
+    @ID_Simulacion INT OUTPUT
+
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @Distancia_KM Decimal(10,2),
+            @Curvas INT,
+            @d_c DECIMAL(10,4),
+            @D_Curvas DECIMAL(10,2),
+            @D_Rectas DECIMAL(10,2);
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        SELECT @Distancia_KM = Distancia_KM, @Curvas = Curvas
+        FROM Circuito
+        WHERE Nombre_Circuito = @Nombre_Circuito;
+
+        IF @Distancia_KM IS NULL
+            THROW 50001, 'Circuito no encontrado', 1;
+
+        SELECT @d_c = Valor FROM Parametro_Sistema WHERE Nombre = 'd_c';
+
+        SET @D_Curvas = @Curvas * @d_c;
+        SET @D_Rectas = @Distancia_KM - @D_Curvas;
+
+        IF @D_Rectas < 0
+            SET @D_Rectas = 0;
+
+        INSERT INTO Simulacion (Fecha_Simulacion, Correo_Usuario_FK, Nombre_Circuito_FK)
+        VALUES (GETDATE(), @Correo_Usuario_FK, @Nombre_Circuito);
+
+        SET @ID_Simulacion = SCOPE_IDENTITY();
+
+        ;WITH CarrosSimulacion AS (
+            SELECT 
+                C.No_Chasis,
+                C.Nombre_Equipo_FK AS Equipo,
+                U.Habilidad AS H,
+                EC.P_Total AS P,
+                EC.A_Total AS A,
+                EC.M_Total AS M
+            FROM Carro C
+            JOIN vw_EstadoCompletoCarro EC ON C.No_Chasis = EC.No_Chasis
+            JOIN Usuario_Carro UC ON C.No_Chasis = UC.No_Chasis_FK
+            JOIN Usuario U ON UC.Correo_Usuario_FK = U.Correo
+            WHERE EC.Estado_Carro = 'COMPLETO'
+        ),
+        CarrosConTiempo AS (
+            SELECT *,
+                (200 + 3*P + 0.2*H - A) AS V_Rectas,
+                (90 + 2*A + 2*M + 0.2*H) AS V_Curvas,
+                (@Curvas*40.0)/(1 + H/100.0) AS Penalizacion,
+                ((@D_Rectas/(200 + 3*P + 0.2*H - A)) + (@D_Curvas/(90 + 2*A + 2*M + 0.2*H)))*3600 +
+                ((@Curvas*40.0)/(1 + H/100.0)) AS TiempoTotal
+            FROM CarrosSimulacion
+        ),
+        CarrosFiltrados AS (
+            SELECT *
+            FROM (
+                SELECT *,
+                    ROW_NUMBER() OVER (PARTITION BY Equipo ORDER BY TiempoTotal ASC) AS RN
+                FROM CarrosConTiempo
+            ) AS t
+            WHERE RN <= 2
+        )
+        INSERT INTO Resultado_Simulacion (ID_Simulacion, No_Chasis, Posicion, Tiempo_Total)
+        SELECT @ID_Simulacion,
+               No_Chasis,
+               ROW_NUMBER() OVER (ORDER BY TiempoTotal ASC) AS Posicion,
+               TiempoTotal
+        FROM CarrosFiltrados
+        ORDER BY TiempoTotal ASC;
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+
+
+
 CREATE OR ALTER VIEW vw_PresupuestoEquipos AS
 SELECT 
     E.Nombre_Equipo,

@@ -20,7 +20,7 @@ CREATE TABLE Usuario (
     Contrasena VARCHAR(255) NOT NULL,
     Nombre_Completo VARCHAR(150),
     Rol VARCHAR(50),
-    Habilidad VARCHAR(50)
+    Habilidad INT NULL
 );
 
 CREATE TABLE Circuito (
@@ -43,9 +43,9 @@ CREATE TABLE Carro (
 CREATE TABLE Parte (
     ID_Parte INT PRIMARY KEY,
     Tipo_Parte VARCHAR(50),
-    p_stat INT,
-    a_stat INT,
-    m_stat INT,
+    p_stat INT CHECK (p_stat BETWEEN 0 AND 9),
+    a_stat INT CHECK (a_stat BETWEEN 0 AND 9),
+    m_stat INT CHECK (m_stat BETWEEN 0 AND 9),
     Nombre_Equipo_FK VARCHAR(100),
     No_Chasis_FK VARCHAR(50),
     ID_Item_FK INT
@@ -63,11 +63,23 @@ CREATE TABLE Instalacion (
 
 CREATE TABLE Simulacion (
     ID_Simulacion INT PRIMARY KEY IDENTITY(1,1),
-    Fecha_Simulacion DATETIME,
-    Ranking_Posicion INT,
-    Correo_Usuario_FK VARCHAR(100),
-    Nombre_Circuito_FK VARCHAR(100)
+    Fecha_Simulacion DATETIME NOT NULL,
+    Correo_Usuario_FK VARCHAR(100) NOT NULL,
+    Nombre_Circuito_FK VARCHAR(100) NOT NULL
 );
+
+
+CREATE TABLE Resultado_Simulacion (
+    ID_Simulacion INT NOT NULL,
+    No_Chasis VARCHAR(50) NOT NULL,
+    Posicion INT NOT NULL,
+    Tiempo_Total DECIMAL(10,2) NOT NULL,
+    PRIMARY KEY (ID_Simulacion, No_Chasis),
+    FOREIGN KEY (ID_Simulacion) REFERENCES Simulacion(ID_Simulacion),
+    FOREIGN KEY (No_Chasis) REFERENCES Carro(No_Chasis)
+);
+
+
 
 CREATE TABLE Usuario_Equipo (
     Correo_Usuario_FK VARCHAR(100),
@@ -95,6 +107,20 @@ CREATE TABLE Aporte (
     Descripcion VARCHAR(255),
     ID_Patrocinador_FK INT
 );
+
+
+
+CREATE TABLE Parametro_Sistema (
+    Nombre VARCHAR(50) PRIMARY KEY,
+    Valor DECIMAL(10,3)
+);
+
+--- Valor de distancia de las curvas 
+INSERT INTO Parametro_Sistema VALUES ('d_c', 0.1); 
+
+
+
+
 
 -- Relaciones de Circuito y Carro con Equipo
 ALTER TABLE Circuito ADD CONSTRAINT FK_Circuito_Equipo 
