@@ -74,6 +74,13 @@ CREATE TABLE Resultado_Simulacion (
     No_Chasis VARCHAR(50) NOT NULL,
     Posicion INT NOT NULL,
     Tiempo_Total DECIMAL(10,2) NOT NULL,
+    P_Snapshot INT,
+    A_Snapshot INT,
+    M_Snapshot INT,
+    H_Snapshot INT,
+    V_Recta_Calc DECIMAL(10,2),
+    V_Curva_Calc DECIMAL(10,2),
+    Penalizacion_Calc DECIMAL(10,2);
     PRIMARY KEY (ID_Simulacion, No_Chasis),
     FOREIGN KEY (ID_Simulacion) REFERENCES Simulacion(ID_Simulacion),
     FOREIGN KEY (No_Chasis) REFERENCES Carro(No_Chasis)
